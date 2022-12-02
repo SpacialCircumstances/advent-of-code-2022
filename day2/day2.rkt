@@ -31,10 +31,38 @@
     [outc-sc (outcome-to-score outc)])
     (+ sh-sc outc-sc)))
 
-(define (calculate-score turns) (foldl (lambda (turn st) (+ st (score-turn turn))) 0 turns))
+(define (find-shape-for-outcome opponent outcome) (case (list opponent outcome)
+    [(("A" win)) "Y"]
+    [(("A" loss)) "Z"]
+    [(("A" draw)) "X"]
+    [(("B" win)) "Z"]
+    [(("B" loss)) "X"]
+    [(("B" draw)) "Y"]
+    [(("C" win)) "X"]
+    [(("C" loss)) "Y"]
+    [(("C" draw)) "Z"]))
+
+(define (des-res-to-outcome des-res) (case des-res 
+    [("X") 'loss]
+    [("Y") 'draw]
+    [("Z") 'win]))
+
+(define (score-turn2 turn) (let* (
+    [opponent (car turn)]
+    [des-res (cadr turn)]
+    [outcome (des-res-to-outcome des-res)]
+    [req-shape (find-shape-for-outcome opponent outcome)]
+    [outc-sc (outcome-to-score outcome)]
+    [sh-sc (shape-to-score req-shape)])
+    (+ sh-sc outc-sc)
+))
+
+(define (calculate-score turns sc-turn) (foldl (lambda (turn st) (+ st (sc-turn turn))) 0 turns))
 
 (let* (
     [lines (file->lines "day2/input.txt")]
     [turns (map string-split lines)]
-    [score (calculate-score turns)])
-    (print score))
+    [score1 (calculate-score turns score-turn)]
+    [score2 (calculate-score turns score-turn2)])
+    (displayln score1)
+    (displayln score2))
