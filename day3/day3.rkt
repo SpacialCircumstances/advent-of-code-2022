@@ -18,10 +18,25 @@
 
 (define (calc-items-priority items) (sum-list (map item-priority (set->list items))))
 
-(let* (
+(define (solve-puzzle-1) (let* (
     [lines (file->lines "day3/input.txt")]
     [compartments (map parse-compartments lines)]
     [common-items (map find-common-items compartments)]
     [priorities (map calc-items-priority common-items)]
     [total-priority (sum-list priorities)])
-    (displayln total-priority))
+    (displayln total-priority)))
+
+(solve-puzzle-1)
+
+(define (chunk-list lst chs) (let* (
+    [firstn (take lst chs)]
+    [rest (drop lst chs)]
+    [tail (if (not (empty? rest)) (chunk-list rest chs) (list))])
+    (cons firstn tail)))
+
+(define (solve-puzzle-2) (let* (
+    [lines (file->lines "day3/input.txt")]
+    [groups (chunk-list lines 3)])
+    (displayln groups)))
+
+(solve-puzzle-2)
