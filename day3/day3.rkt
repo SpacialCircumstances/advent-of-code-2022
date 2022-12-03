@@ -34,9 +34,17 @@
     [tail (if (not (empty? rest)) (chunk-list rest chs) (list))])
     (cons firstn tail)))
 
+(define (find-common-in-group group) (let* (
+    [sets (map list->set group)]
+    [commons (apply set-intersect sets)])
+    (car (set->list commons))))
+
 (define (solve-puzzle-2) (let* (
     [lines (file->lines "day3/input.txt")]
-    [groups (chunk-list lines 3)])
-    (displayln groups)))
+    [itemized (map string->list lines)]
+    [groups (chunk-list itemized 3)]
+    [commons (map find-common-in-group groups)]
+    [priorities (map item-priority commons)])
+    (displayln (sum-list priorities))))
 
 (solve-puzzle-2)
