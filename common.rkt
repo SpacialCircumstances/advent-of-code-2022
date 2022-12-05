@@ -16,4 +16,10 @@
     (lambda (next st) 
         (sort (cons (max next (car st)) (cdr st)) <)) (zero-list n) lst))
 
+(define (string-chunk str len) (let* (
+    [chunk-len (min len (string-length str))]
+    [chunk (substring str 0 chunk-len)]
+    [rest (substring str chunk-len)])
+    (if (string-empty? rest) (list chunk) (cons chunk (string-chunk rest len)))))
+
 (provide (all-defined-out))
