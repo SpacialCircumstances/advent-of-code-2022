@@ -90,7 +90,28 @@ let parseTreeFromConsole text =
     let finishedState = List.fold applyCommand init commands
     finishedState.fs
 
+let rec getSize entry =
+    match entry with
+        | FileEntry (_, size) -> size
+        | Directory (_, files) -> files |> List.map getSize |> List.sum
+
+let rec foldFSTree folder init tree =
+    List.fold (fun st entry -> match entry with
+                                | FileEntry _ -> folder st entry
+                                | Directory (_, subtree) ->
+                                    foldFSTree folder (folder st entry) subtree) init tree
+
+let summing sum entry =
+    match entry with
+        | FileEntry _ -> sum
+        | Directory _ ->
+            let size = getSize entry
+            if size < 100000 then
+                sum + size
+            else sum
+
 let solvePuzzle () =
     let text = File.ReadAllText "Inputs/Day7/input.txt"
     let parsed = parseTreeFromConsole text
-    ()
+    let sumOfSizesOfBelow100000 = foldFSTree summing 0 parsed
+    printfn $"%i{sumOfSizesOfBelow100000}"
