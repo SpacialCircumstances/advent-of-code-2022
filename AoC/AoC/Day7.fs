@@ -110,8 +110,21 @@ let summing sum entry =
                 sum + size
             else sum
 
+let findSizeable sizeToDelete currentBest entry =
+    match entry with
+        | FileEntry _ -> currentBest
+        | Directory _ ->
+            let size = getSize entry
+            if size >= sizeToDelete then
+                min size currentBest
+            else currentBest
+
 let solvePuzzle () =
     let text = File.ReadAllText "Inputs/Day7/input.txt"
     let parsed = parseTreeFromConsole text
+    let rootSize = List.sumBy getSize parsed
+    let sizeToDelete = rootSize - 40000000
     let sumOfSizesOfBelow100000 = foldFSTree summing 0 parsed
-    printfn $"%i{sumOfSizesOfBelow100000}"
+    let smallestForEnoughSpace = foldFSTree (findSizeable sizeToDelete) rootSize parsed
+    printfn $"Sum of sizes below 100000: %i{sumOfSizesOfBelow100000}"
+    printfn $"Size of smallest sufficient directory: %i{smallestForEnoughSpace}"
