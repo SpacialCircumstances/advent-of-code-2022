@@ -8,7 +8,7 @@ open FParsec.CharParsers
 
 type FileSystemTree =
     | Directory of string * FileSystemTree list
-    | File of string * int
+    | FileEntry of string * int
     
 type Destination =
     | Up
@@ -21,6 +21,12 @@ type FileListing =
 type Command =
     | Cd of Destination
     | Ls of FileListing list
+    
+type State = {
+    fs: FileSystemTree list
+    getters: (unit -> FileSystemTree list) list
+    modifiers: ((FileSystemTree list -> FileSystemTree list) -> State -> State) list
+}
     
 let ws = skipMany (pchar ' ')
     
@@ -45,11 +51,44 @@ let parseCommands text = match run commands text with
     
 let root = Directory ("/", [])
     
+let getDir name listings = listings |> List.pick (fun d -> match d with
+                                                            | Directory (n, l) when n = name -> Some l
+                                                            | _ -> None)
+    
+let updateDir name listings update = listings |> List.map (fun l -> match l with
+                                                                        | Directory (n, s) when n = name -> Directory (n, update s)
+                                                                        | x -> x)
+    
+let updateState state listing =
+    let currentModi = List.head state.modifiers
+    match listing with
+        | Dir name -> currentModi (fun ls -> Directory (name, []) :: ls) state
+        | File (name, size) -> currentModi (fun ls -> FileEntry (name, size) :: ls) state
+    
+let applyCommand state cmd =
+    match cmd with
+        | Cd dest ->
+            match dest with
+                | Up ->
+                    { state with getters = List.tail state.getters; modifiers = List.tail state.modifiers }
+                | Into dirName ->
+                    let currGet = List.head state.getters
+                    let getter = fun () -> getDir dirName (currGet ())
+                    let currMod = List.head state.modifiers
+                    let modi = fun mf -> currMod (fun f -> updateDir dirName f mf)
+                    { state with getters = getter :: state.getters; modifiers = modi :: state.modifiers }
+        | Ls listings ->
+            List.fold updateState state listings
+    
 let parseTreeFromConsole text =
-    let init = root
     let commands = parseCommands text
-    List.iter (printfn "%A") commands
-    ()
+    let init = {
+        fs = [root]
+        getters = [fun () -> [root]]
+        modifiers = [fun mf st -> { st with fs = mf st.fs } ]
+    }
+    let finishedState = List.fold applyCommand init commands
+    finishedState.fs
 
 let solvePuzzle () =
     let text = File.ReadAllText "Inputs/Day7/input.txt"
