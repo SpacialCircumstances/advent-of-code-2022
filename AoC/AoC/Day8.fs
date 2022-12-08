@@ -63,10 +63,32 @@ let countVisible forest (visibleTrees: bool[,]) =
                 c <- c + 1
     c
 
+let calculateVisibilityScores forest =
+    Array2D.init forest.width forest.height (fun x y ->
+        let treeH = forest.trees.[x,y]
+        let treesInSightLines = [
+            right (x + 1) y forest
+            left (x - 1) y forest
+            up x (y - 1) forest
+            down x (y + 1) forest ]
+        let scoresInSightLines = treesInSightLines
+                                 |> List.map (List.map (fun (x, y) -> forest.trees.[x,y]))
+                                 |> List.map (fun sl -> (sl |> List.tryFindIndex (fun el -> el >= treeH) |> Option.map ((+) 1) |> Option.defaultValue (List.length sl)))
+        List.fold (*) 1 scoresInSightLines
+        )
+
+let max2D arr =
+    let mutable m = 0
+    Array2D.iter (fun el -> m <- max m el) arr
+    m
+
 let solvePuzzle () =
-    let lines = File.ReadAllLines("Inputs/Day8/test.txt")
+    let lines = File.ReadAllLines("Inputs/Day8/input.txt")
     let forest = parseForest lines
     let visibleTrees = markVisible forest
     let visibleCount = countVisible forest visibleTrees
+    let visibilityScores = calculateVisibilityScores forest
+    let highestScore = max2D visibilityScores
     printfn $"Visible trees: %i{visibleCount}"
+    printfn $"Highest visibility score: %i{highestScore}"
     ()
