@@ -54,24 +54,23 @@ let moveTail (tx, ty) (dx, dy) =
     else
         (tx + norm dx, ty + norm dy)
         
-let move state direction =
+let move (headPosition, tailPosition, visitedTailPositions) direction =
     let moveVec = moveDirection direction
-    let newHead = addV state.headPosition moveVec
-    let delta = subV newHead state.tailPosition
-    let newTail = moveTail state.tailPosition delta
-    { state with headPosition = newHead; tailPosition = newTail; visitedTailPositions = Set.add newTail state.visitedTailPositions }
+    let newHead = addV headPosition moveVec
+    let delta = subV newHead tailPosition
+    let newTail = moveTail tailPosition delta
+    (newHead, newTail, Set.add newTail visitedTailPositions)
 
-let simulateMovement commands =
-    let init = {
-        visitedTailPositions = Set.ofList [(0, 0)]
-        tailPosition = (0, 0)
-        headPosition = (0, 0)
-    }    
+let simulateMovement2 commands =
+    let visitedTailPositions = Set.ofList [(0, 0)]
+    let tailPosition = (0, 0)
+    let headPosition = (0, 0)
+    let init = (headPosition, tailPosition, visitedTailPositions) 
     List.fold (fun st cmd -> List.fold (fun st _ -> move st cmd.direction) st (List.init cmd.steps id)) init commands
 
 let solvePuzzle () =
     let lines = File.ReadAllLines "Inputs/Day9/input.txt"
     let commands = parseCommands lines
-    let result = simulateMovement commands
-    printfn "Visited tail positions: %i" (Set.count result.visitedTailPositions)
+    let (_, _, result) = simulateMovement2 commands
+    printfn "Visited tail positions: %i" (Set.count result)
     ()
