@@ -68,9 +68,34 @@ let simulateMovement2 commands =
     let init = (headPosition, tailPosition, visitedTailPositions) 
     List.fold (fun st cmd -> List.fold (fun st _ -> move st cmd.direction) st (List.init cmd.steps id)) init commands
 
+let follow (hx, hy) (tx, ty) =
+    let delta = subV (hx, hy) (tx, ty)
+    moveTail (tx, ty) delta
+
+let rec followAll positions head =
+    match List.tryHead positions with
+        | Some tail ->
+            let newTail = follow head tail
+            newTail :: followAll (List.tail positions) newTail
+        | None -> []
+
+let moveAll (positions, visited) direction =
+    let newHead = addV (List.head positions) (moveDirection direction)
+    let newTails = followAll (List.tail positions) newHead
+    let newPositions = newHead :: newTails
+    let newTail = List.last newTails
+    (newPositions, Set.add newTail visited)
+
+let simulateMovementN commands n =
+    let visitedTailPositions = Set.ofList [(0, 0)]
+    let positions = List.init n (fun _ -> (0, 0))
+    List.fold (fun st cmd -> List.fold (fun st _ -> moveAll st cmd.direction) st (List.init cmd.steps id)) (positions, visitedTailPositions) commands
+
 let solvePuzzle () =
     let lines = File.ReadAllLines "Inputs/Day9/input.txt"
     let commands = parseCommands lines
     let (_, _, result) = simulateMovement2 commands
+    let (_, result2) = simulateMovementN commands 10
     printfn "Visited tail positions: %i" (Set.count result)
+    printfn "Visited longer tail positions: %i" (Set.count result2)
     ()
