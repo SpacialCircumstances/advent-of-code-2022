@@ -2,5 +2,5 @@
 
 [<EntryPoint>]
 let main _ =
-    Day9.solvePuzzle ()
+    Day10.solvePuzzle ()
     0
