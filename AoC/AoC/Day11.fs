@@ -128,9 +128,13 @@ let runPuzzleRounds monkeys rounds manageWorryLevel =
     printfn "%A" endState.inspectionCounters
     printfn $"%A{business}"
 
+let divisor monkeys =
+    let d = monkeys |> List.map (fun m -> m.test.divisibleBy) |> List.reduce (*)
+    fun i -> BigInteger.ModPow(i, 1I, d)
+
 let solvePuzzle () =
-    let text = File.ReadAllText "Inputs/Day11/test.txt"
+    let text = File.ReadAllText "Inputs/Day11/input.txt"
     let monkeys = parseMonkeys text
     runPuzzleRounds monkeys 20 bore
-    runPuzzleRounds monkeys 10000 id
+    runPuzzleRounds monkeys 10000 (divisor monkeys)
     ()
