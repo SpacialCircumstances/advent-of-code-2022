@@ -1,6 +1,7 @@
 ﻿module AoC.Day11
 
 open System.IO
+open System.Numerics
 open FParsec
 
 type Operand =
@@ -22,7 +23,7 @@ type Test = {
 }
 
 type Monkey = {
-    items: int list
+    items: bigint list
     operation: Expr
     test: Test
     number: int
@@ -30,17 +31,17 @@ type Monkey = {
 
 type State = {
     monkeys: Monkey list
-    inspectionCounters: Map<int, int>
+    inspectionCounters: Map<int, int64>
 }
 
 let initState monkeys = {
     monkeys = monkeys
-    inspectionCounters = List.map (fun m -> (m.number, 0)) monkeys |> Map.ofList
+    inspectionCounters = List.map (fun m -> (m.number, 0L)) monkeys |> Map.ofList
 }
 
 let monkeyHeader = pstring "Monkey " >>. pint32 .>> pchar ':' .>> spaces
 
-let startingItems = pstring "Starting items: " >>. sepBy pint32 (pchar ',' .>> spaces) .>> spaces
+let startingItems = pstring "Starting items: " >>. sepBy pint64 (pchar ',' .>> spaces) .>> spaces
 
 let operand = ((stringReturn "old" Old) <|> (pint32 |>> Number)) .>> spaces
 
@@ -65,7 +66,7 @@ let test = skipString "Test: " >>. testDivisibleBy .>>. ifTrue .>>. ifFalse .>> 
 let monkey = monkeyHeader .>>. startingItems .>>. operation .>>. test |>> fun (((mh, si), op), te) -> {
     operation = op
     test = te
-    items = si
+    items = si |> List.map bigint
     number = mh
 }
 
@@ -77,53 +78,59 @@ let parseMonkeys text = match run monkeys text with
 
 let inspect operation item =
     let getValue op = match op with
-                        | Number i -> i
+                        | Number i -> bigint i
                         | Old -> item
                         
     let (op1, oper, op2) = operation
     let v1 = getValue op1
     let v2 = getValue op2
     match oper with
-        | Add -> v1 + v2
-        | Sub -> v1 - v2
-        | Mul -> v1 * v2
-        | Div -> v1 / v2
+        | Add -> BigInteger.Add(v1, v2)
+        | Sub -> BigInteger.Subtract(v1, v2)
+        | Mul -> BigInteger.Multiply(v1, v2)
+        | Div -> BigInteger.Divide(v1, v2)
 
-let bore worryLevel = worryLevel / 3
+let bore worryLevel = BigInteger.Divide(worryLevel, 3I)
 
 let performTest test worryLevel =
-    if worryLevel % test.divisibleBy = 0 then test.ifTrueMonkey else test.ifFalseMonkey
+    if BigInteger.DivRem(worryLevel, test.divisibleBy) |> snd = 0I then test.ifTrueMonkey else test.ifFalseMonkey
 
-let incrCounter inspectionCounters idx = Map.change idx (Option.map ((+) 1)) inspectionCounters
+let incrCounter inspectionCounters idx = Map.change idx (Option.map ((+) 1L)) inspectionCounters
 
-let performItem (operation, test) monkeyIdx state item =
-    let worryLevel = item |> inspect operation |> bore
+let performItem (operation, test) monkeyIdx manageWorryLevels state item =
+    let worryLevel = item |> inspect operation |> manageWorryLevels
     let targetMonkeyIdx = performTest test worryLevel
     let targetMonkey = List.item targetMonkeyIdx state.monkeys
     let newMonkey = { targetMonkey with items = targetMonkey.items @ [worryLevel] }
     { state with monkeys = List.updateAt targetMonkeyIdx newMonkey state.monkeys; inspectionCounters = incrCounter state.inspectionCounters monkeyIdx }
 
-let performTurn state monkeyIdx =
+let performTurn manageWorryLevels state monkeyIdx =
     let monkey = state.monkeys.[monkeyIdx]
     let turnState = { state with monkeys = List.updateAt monkeyIdx { monkey with items = [] } state.monkeys }
-    List.fold (performItem (monkey.operation, monkey.test) monkeyIdx) turnState (monkey.items)
+    List.fold (performItem (monkey.operation, monkey.test) monkeyIdx manageWorryLevels) turnState monkey.items
 
-let performRound state round =
+let performRound manageWorryLevels state round =
+    printfn $"Performing round %i{round}"
     let monkeyCount = List.length state.monkeys
-    Seq.fold performTurn state (seq { 0..(monkeyCount - 1) })
+    Seq.fold (performTurn manageWorryLevels) state (seq { 0..(monkeyCount - 1) })
 
-let performRounds monkeys rounds =
+let performRounds manageWorryLevels monkeys rounds =
     let st = initState monkeys
-    Seq.fold performRound st (seq { 0..(rounds - 1) })
+    Seq.fold (performRound manageWorryLevels) st (seq { 0..(rounds - 1) })
 
 let calculateBusiness state =
     let top2 = state.inspectionCounters |> Map.toList |> List.map snd |> List.sortDescending |> List.take 2
     (List.item 0 top2) * (List.item 1 top2)
 
-let solvePuzzle () =
-    let text = File.ReadAllText "Inputs/Day11/input.txt"
-    let monkeys = parseMonkeys text
-    let endState = performRounds monkeys 20
+let runPuzzleRounds monkeys rounds manageWorryLevel =
+    let endState = performRounds manageWorryLevel monkeys rounds
     let business = calculateBusiness endState
+    printfn "%A" endState.inspectionCounters
     printfn $"%A{business}"
+
+let solvePuzzle () =
+    let text = File.ReadAllText "Inputs/Day11/test.txt"
+    let monkeys = parseMonkeys text
+    runPuzzleRounds monkeys 20 bore
+    runPuzzleRounds monkeys 10000 id
     ()
