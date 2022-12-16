@@ -61,8 +61,10 @@ let rec findShortestPathR heightmap froms target visited len =
                     let nexts = possibleFrom heightmap n v
                     (nexts, List.fold (Set.add |> swap) v nexts)) visited froms
     let nexts = List.collect id nexts
-    if List.contains target nexts then
-         len + 1
+    if List.isEmpty nexts then
+        None
+    elif List.contains target nexts then
+         Some (len + 1)
     else findShortestPathR heightmap nexts target newVisited (len + 1)
    
 let findShortestPath heightmap start = findShortestPathR heightmap [start] heightmap.target (Set.singleton heightmap.start) 0
@@ -78,9 +80,9 @@ let findZeroPoints heightmap =
 let solvePuzzle () =
     let text = File.ReadAllLines "Inputs/Day12/input.txt" |> Array.map (fun s -> s.Trim())
     let heightmap = parseHeightmap text
-    let shortestPath = findShortestPath heightmap heightmap.start
+    let shortestPath = findShortestPath heightmap heightmap.start |> Option.get
     printfn $"Puzzle1: %i{shortestPath}"
     let pointsAtHeightZero = findZeroPoints heightmap
-    let shortestPaths = Seq.map (findShortestPath heightmap) pointsAtHeightZero
+    let shortestPaths = Seq.choose (findShortestPath heightmap) pointsAtHeightZero
     printfn $"Puzzle2: %i{Seq.min shortestPaths}"
     ()
